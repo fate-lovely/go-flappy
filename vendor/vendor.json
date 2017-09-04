@@ -1,0 +1,25 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "HJjcGs+CcK+oWm/AgRWD8QLj0KA=",
+			"path": "github.com/veandco/go-sdl2/img",
+			"revision": "f08ecc9c86ef8321e771bb78fe378aed433a109f",
+			"revisionTime": "2017-09-03T09:55:30Z"
+		},
+		{
+			"checksumSHA1": "YHN1A5zbVFwFDyGxEAvfSC0y/w4=",
+			"path": "github.com/veandco/go-sdl2/sdl",
+			"revision": "f08ecc9c86ef8321e771bb78fe378aed433a109f",
+			"revisionTime": "2017-09-03T09:55:30Z"
+		},
+		{
+			"checksumSHA1": "zXIa09jBjuw8XfTdCJ8HcY6jftg=",
+			"path": "github.com/veandco/go-sdl2/ttf",
+			"revision": "f08ecc9c86ef8321e771bb78fe378aed433a109f",
+			"revisionTime": "2017-09-03T09:55:30Z"
+		}
+	],
+	"rootPath": "github.com/fate-lovely/go-flappy"
+}

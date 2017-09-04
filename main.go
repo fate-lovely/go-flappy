@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -29,12 +30,21 @@ func run() error {
 	}
 	defer w.Destroy()
 
-	if err := drawTitle(r); err != nil {
-		return fmt.Errorf("could not draw title: %v", err)
+	s, err := newScene(r)
+	if err != nil {
+		return fmt.Errorf("could not create scene: %v", err)
 	}
+	defer s.destroy()
 
-	time.Sleep(5 * time.Second)
-	return nil
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	select {
+	case err := <-s.run(ctx, r):
+		return err
+	case <-time.After(5 * time.Second):
+		return nil
+	}
 }
 
 func drawTitle(r *sdl.Renderer) error {
