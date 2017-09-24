@@ -1,21 +1,26 @@
 package game
 
 import (
-	"fmt"
-
+	"github.com/pkg/errors"
 	"github.com/veandco/go-sdl2/img"
 	"github.com/veandco/go-sdl2/sdl"
 )
 
 type scene struct {
-	bg   *sdl.Texture
+	sky  *sdl.Texture
+	land *land
 	bird *bird
 }
 
 func newScene(r *sdl.Renderer) (*scene, error) {
-	bg, err := img.LoadTexture(r, "assets/imgs/background.png")
+	sky, err := img.LoadTexture(r, "assets/sky.png")
 	if err != nil {
-		return nil, fmt.Errorf("could not load background image: %v", err)
+		return nil, errors.Wrap(err, "could not load sky.png")
+	}
+
+	land, err := newLand(r)
+	if err != nil {
+		return nil, err
 	}
 
 	bird, err := newBird(r)
@@ -24,7 +29,8 @@ func newScene(r *sdl.Renderer) (*scene, error) {
 	}
 
 	return &scene{
-		bg:   bg,
+		sky:  sky,
+		land: land,
 		bird: bird,
 	}, nil
 }
@@ -35,6 +41,8 @@ func (s *scene) update(evt event) bool {
 		s.bird.jump()
 	}
 
+	s.land.update()
+
 	return s.bird.update()
 }
 
@@ -44,8 +52,14 @@ func (s *scene) restart() {
 
 func (s *scene) paint(r *sdl.Renderer) error {
 	r.Clear()
-	if err := r.Copy(s.bg, nil, nil); err != nil {
-		return fmt.Errorf("could not copy background: %v", err)
+
+	skyDst := &sdl.Rect{X: 0, Y: 0, W: windowWidth, H: skyHeight}
+	if err := r.Copy(s.sky, nil, skyDst); err != nil {
+		return errors.Wrap(err, "could not copy sky")
+	}
+
+	if err := s.land.paint(r); err != nil {
+		return err
 	}
 
 	if err := s.bird.paint(r); err != nil {
@@ -58,6 +72,7 @@ func (s *scene) paint(r *sdl.Renderer) error {
 }
 
 func (s *scene) destroy() {
-	s.bg.Destroy()
+	s.sky.Destroy()
+	s.land.destroy()
 	s.bird.destroy()
 }

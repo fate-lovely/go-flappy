@@ -10,11 +10,11 @@ import (
 )
 
 type Game struct {
-	events   chan event
-	window   *sdl.Window
-	renderer *sdl.Renderer
-	scene    *scene
-	gameOver bool
+	events     chan event
+	window     *sdl.Window
+	renderer   *sdl.Renderer
+	scene      *scene
+	gameIsOver bool
 }
 
 type event int
@@ -26,14 +26,17 @@ const (
 	eventRestart event = iota
 )
 
-var windowWidth int
-var windowHeight int
+var windowWidth int32
+var windowHeight int32
+var landHeight int32
+var skyHeight int32
 
 func NewGame(width, height int) *Game {
-	windowWidth = width
-	windowHeight = height
-	maxY = float64(windowHeight - birdHeight/2)
-	initialY = float64(windowHeight / 2)
+	// init common params
+	windowWidth = int32(width)
+	windowHeight = int32(height)
+	landHeight = windowHeight / 4
+	skyHeight = windowHeight - landHeight
 
 	return &Game{
 		events: make(chan event),
@@ -42,9 +45,13 @@ func NewGame(width, height int) *Game {
 
 // must be called in main goroutine
 func (g *Game) Run() error {
-	g.init()
+	if err := g.init(); err != nil {
+		return err
+	}
+
 	defer g.destroy()
 
+	// sdl.WaitEvent must be called in main thread
 	runtime.LockOSThread()
 
 	errc := g.loop()
@@ -98,7 +105,7 @@ func (g *Game) fetchEvent() event {
 }
 
 func (g *Game) restart() {
-	g.gameOver = false
+	g.gameIsOver = false
 	g.scene.restart()
 	// clear all events
 outer:
@@ -122,19 +129,19 @@ func (g *Game) tick(evt event) error {
 }
 
 func (g *Game) paint() error {
-	if g.gameOver {
-		return g.drawTitle("Game Over")
+	if g.gameIsOver {
+		return g.gameOver()
 	}
 	return g.scene.paint(g.renderer)
 }
 
 func (g *Game) update(evt event) {
-	if g.gameOver {
+	if g.gameIsOver {
 		return
 	}
 
-	g.gameOver = g.scene.update(evt)
-	if g.gameOver {
+	g.gameIsOver = g.scene.update(evt)
+	if g.gameIsOver {
 		time.AfterFunc(2*time.Second, func() {
 			g.events <- eventRestart
 		})
@@ -147,7 +154,7 @@ func (g *Game) init() error {
 		return fmt.Errorf("could not init sdl: %v", err)
 	}
 
-	w, r, err := sdl.CreateWindowAndRenderer(windowWidth, windowHeight, sdl.WINDOW_SHOWN)
+	w, r, err := sdl.CreateWindowAndRenderer(int(windowWidth), int(windowHeight), sdl.WINDOW_SHOWN)
 	if err != nil {
 		return fmt.Errorf("could not create window: %v", err)
 	}
@@ -171,7 +178,16 @@ func (g *Game) destroy() {
 	g.scene.destroy()
 }
 
-func (g *Game) drawTitle(text string) error {
+func (g *Game) gameOver() error {
+	w := windowWidth / 3 * 2
+	x := (windowWidth - w) / 2
+	h := windowHeight / 2
+	y := (windowHeight - h) / 2
+	target := &sdl.Rect{X: x, W: w, Y: y, H: h}
+	return g.drawTitle("Game Over", target)
+}
+
+func (g *Game) drawTitle(text string, target *sdl.Rect) error {
 	r := g.renderer
 
 	r.Clear()
@@ -200,7 +216,7 @@ func (g *Game) drawTitle(text string) error {
 	}
 	defer texture.Destroy()
 
-	if err := r.Copy(texture, nil, nil); err != nil {
+	if err := r.Copy(texture, nil, target); err != nil {
 		return fmt.Errorf("could not copy texture: %v", err)
 	}
 
